@@ -1,377 +1,78 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Parkour — Dual Realm Parkour Platformer</title>
+  <title>Drawing Test</title>
   <style>
-    :root{--bg:#0b1020;--fg:#e6eef8;--accent:#ff6b6b;--muted:#98a8c7}
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,#071025 0%, #0b1630 60%);color:var(--fg);}
-    #gameWrap{display:flex;align-items:center;justify-content:center;height:100%;}
-    canvas{background:transparent;border-radius:12px;box-shadow:0 10px 40px rgba(2,6,23,0.7);}
-    .hud{position:fixed;left:18px;top:18px;font-size:14px;color:var(--muted);} 
-    .menu{position:fixed;right:18px;top:18px;background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);backdrop-filter:blur(6px)}
-    button{background:linear-gradient(180deg,#2b3a55,#233047);color:var(--fg);border:1px solid rgba(255,255,255,0.03);padding:6px 10px;border-radius:6px;margin:4px;cursor:pointer}
-    .controls{font-size:13px;color:var(--muted);margin-top:6px}
-    .footer{position:fixed;left:18px;bottom:18px;color:var(--muted);font-size:12px}
-    .bigTitle{font-weight:700;font-size:18px;margin-bottom:6px}
-    .hint{color:#b6c4db;font-size:12px}
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      border: 2px solid white;
+      margin-top: 10px;
+      cursor: crosshair;
+      background: black;
+    }
+
+    button {
+      margin: 6px;
+      padding: 8px 14px;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-<div id="gameWrap">
-  <canvas id="c" width="1200" height="720"></canvas>
-</div>
-<div class="hud" id="hud">Level 1 • Time: 0.00s • Pearls: 0/0</div>
-<div class="menu" id="menu">
-  <div class="bigTitle">Dual-Realm Parkour</div>
-  <div class="hint">Twist: press <strong>E</strong> to toggle between Light & Shadow realms — platforms change!</div>
-  <div style="margin-top:8px">
-    <button id="btnStart">Start / Restart</button>
-    <button id="btnNext">Next Level</button>
-    <button id="btnEditor">Level Editor</button>
+
+  <h2>Draw Test</h2>
+  <div>
+    <button onclick="clearCanvas()">Clear</button>
+    <button onclick="goFullscreen()">Fullscreen</button>
   </div>
-  <div class="controls">
-    <div><strong>Movement:</strong> A / D or ← →</div>
-    <div><strong>Jump:</strong> W / Space / ↑</div>
-    <div><strong>Dash:</strong> Shift (horizontal dash)</div>
-    <div><strong>Wall Jump:</strong> Jump while touching wall</div>
-    <div><strong>Toggle Realm:</strong> E (Light / Shadow)</div>
-  </div>
-</div>
-<div class="footer">Made for you — standalone single-file. Save as <code>parkour_dual_realm.html</code> and open in browser.</div>
 
-<script>
-// Parkour — Dual Realm Platformer (single-file)
-// Author: ChatGPT-generated
+  <canvas id="canvas" width="800" height="450"></canvas>
 
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
-let keys = {};
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-addEventListener('keydown', e=>{keys[e.key.toLowerCase()]=true; if(e.key===' '){e.preventDefault();}});
-addEventListener('keyup', e=>{keys[e.key.toLowerCase()]=false});
+    let drawing = false;
 
-// Utility
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function vlen(x,y){return Math.sqrt(x*x+y*y)}
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mouseleave", () => drawing = false);
 
-// World settings
-const TILE = 40;
-const GRAV = 1600; // px/s^2
+    canvas.addEventListener("mousemove", (e) => {
+      if (!drawing) return;
 
-// Colors per realm
-const REALMS = {
-  light: {bg:'#cfe9ff',platform:'#1f3550',accent:'#ff6b6b',fog:'rgba(255,255,255,0.4)'} ,
-  shadow: {bg:'#06060a',platform:'#3a2738',accent:'#7efcff',fog:'rgba(0,0,0,0.35)'}
-};
-let currentRealm = 'light';
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-// Level format: platforms array {x,y,w,h,realm:'both'|'light'|'shadow'} spikes, pearls collectibles, start, goal
-const levels = [];
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
 
-// Helper to add platform
-function Platform(x,y,w,h,realm='both'){return {x,y,w,h,realm}};
-function Spike(x,y,w,h){return {x,y,w,h}};
-function Pearl(x,y){return {x,y,got:false}};
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
 
-// Prebuilt levels (handcrafted)
-levels.push({
-  name:'Intro Roofs',
-  start:{x:120,y:520},
-  platforms:[
-    Platform(0,660,1200,60,'both'),
-    Platform(100,540,160,24,'light'),
-    Platform(300,480,140,24,'both'),
-    Platform(480,420,120,24,'shadow'),
-    Platform(620,360,160,24,'both'),
-    Platform(900,420,120,24,'light'),
-    Platform(780,520,120,24,'shadow')
-  ],
-  spikes:[Spike(440,636,80,24)],
-  pearls:[Pearl(330,440), Pearl(640,320)],
-  goal:{x:1060,y:580,w:60,h:80}
-});
-
-levels.push({
-  name:'Tower Shift',
-  start:{x:80,y:520},
-  platforms:[
-    Platform(0,660,1200,60,'both'),
-    Platform(40,520,200,24,'shadow'),
-    Platform(260,440,160,24,'light'),
-    Platform(440,360,140,24,'shadow'),
-    Platform(620,280,120,24,'light'),
-    Platform(760,200,120,24,'shadow'),
-    Platform(920,120,160,24,'both'),
-  ],
-  spikes:[Spike(220,636,40,24), Spike(520,636,120,24)],
-  pearls:[Pearl(300,400),Pearl(780,160),Pearl(960,80)],
-  goal:{x:1040,y:40,w:80,h:80}
-});
-
-levels.push({
-  name:'Rail Rush',
-  start:{x:40,y:580},
-  platforms:[
-    Platform(0,660,1200,60,'both'),
-    Platform(40,600,600,18,'both'),
-    Platform(680,540,120,18,'light'),
-    Platform(840,480,120,18,'shadow'),
-    Platform(980,420,120,18,'light')
-  ],
-  spikes:[Spike(520,636,40,24)],
-  pearls:[Pearl(760,500),Pearl(940,440)],
-  goal:{x:1100,y:360,w:60,h:60}
-});
-
-// More levels could be added... total pearls counted
-
-// Player
-const player = {
-  x:100,y:480,w:28,h:44,vx:0,vy:0,onGround:false,canDash:true,dashing:false,dir:1,wallTouch:null,
-  color:'#ffd166',shadow:'#6bfffe'
-};
-
-let curLevel = 0;
-let levelStartTime=0;
-let runTime=0;
-let pearlsCollected = 0;
-let totalPearls = 0;
-let checkpoint = null;
-let gameRunning = false;
-let particles=[];
-
-function loadLevel(i){
-  curLevel = i % levels.length;
-  const lvl = levels[curLevel];
-  player.x = lvl.start.x; player.y = lvl.start.y; player.vx=0; player.vy=0; player.onGround=false; player.canDash=true; player.dashing=false; player.dir = 1;
-  pearlsCollected = 0; totalPearls = lvl.pearls.length; lvl.pearls.forEach(p=>p.got=false);
-  checkpoint = {x:player.x,y:player.y};
-  levelStartTime = performance.now();
-  runTime=0;
-  gameRunning=true;
-  updateHUD();
-}
-
-function updateHUD(){
-  const hud = document.getElementById('hud');
-  const t = ((runTime)/1000).toFixed(2);
-  hud.innerHTML = `Level ${curLevel+1} - ${levels[curLevel].name} • Time: ${t}s • Pearls: ${pearlsCollected}/${totalPearls} • Realm: ${currentRealm}`;
-}
-
-// Simple particle system
-function spawnParticle(x,y,dx,dy,life=500){particles.push({x,y,dx,dy,life,age:0})}
-
-// Basic AABB collision
-function rectsOverlap(a,b){return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y}
-
-function physics(dt){
-  const lvl = levels[curLevel];
-
-  // Input
-  let left = keys['a'] || keys['arrowleft'];
-  let right = keys['d'] || keys['arrowright'];
-  let jump = keys['w'] || keys[' '] || keys['arrowup'];
-  let dashKey = keys['shift'];
-
-  // Horizontal
-  const accel = 2600; const maxSpeed = 420;
-  if(left){player.vx -= accel*dt; player.dir=-1}
-  if(right){player.vx += accel*dt; player.dir=1}
-  // air drag
-  if(!left && !right) player.vx *= (1 - clamp(10*dt,0,0.9));
-  player.vx = clamp(player.vx,-maxSpeed,maxSpeed);
-
-  // Gravity
-  player.vy += GRAV*dt;
-
-  // Dashing
-  if(dashKey && player.canDash && Math.abs(player.vx)>20){
-    player.dashing = true; player.canDash=false; player.vx = player.dir*900; player.vy = -120; spawnParticle(player.x+player.w/2,player.y+player.h/2, -player.dir*200,0,300);
-  }
-
-  // Movement integration
-  player.x += player.vx*dt;
-  player.y += player.vy*dt;
-
-  // Collisions
-  player.onGround = false; player.wallTouch = null;
-  // Platforms collision based on realm
-  for(const p of lvl.platforms){
-    if(p.realm !== 'both' && p.realm !== currentRealm) continue;
-    const plat = {x:p.x,y:p.y,w:p.w,h:p.h};
-    if(rectsOverlap(player, plat)){
-      // resolve vertically
-      const prevY = player.y - player.vy*dt;
-      if(prevY + player.h <= plat.y){ // landed on top
-        player.y = plat.y - player.h; player.vy = 0; player.onGround = true; player.canDash = true; player.dashing=false;
-      } else if(prevY >= plat.y + plat.h){ // hit bottom
-        player.y = plat.y + plat.h; player.vy = Math.max(0,player.vy);
-      } else {
-        // horizontal collision
-        const prevX = player.x - player.vx*dt;
-        if(prevX + player.w <= plat.x){ // hit left
-          player.x = plat.x - player.w; player.vx = 0; player.wallTouch='right'; player.canDash = true;
-        } else if(prevX >= plat.x + plat.w){
-          player.x = plat.x + plat.w; player.vx = 0; player.wallTouch='left'; player.canDash = true;
-        }
+    function goFullscreen() {
+      if (canvas.requestFullscreen) {
+        canvas.requestFullscreen();
+      } else if (canvas.webkitRequestFullscreen) {
+        canvas.webkitRequestFullscreen();
       }
     }
-  }
+  </script>
 
-  // Spikes
-  for(const s of lvl.spikes){ if(rectsOverlap(player,s)) dieAndRespawn(); }
-
-  // Pearls
-  for(const p of lvl.pearls){ if(!p.got && rectsOverlap(player,{x:p.x-12,y:p.y-12,w:24,h:24})){ p.got=true; pearlsCollected++; spawnParticle(p.x,p.y, (Math.random()-0.5)*200, -200 - Math.random()*200, 700); updateHUD(); } }
-
-  // Goal
-  const g = lvl.goal; if(rectsOverlap(player,g) && pearlsCollected>=totalPearls){ levelComplete(); }
-
-  // Out of bounds
-  if(player.y > H+200) dieAndRespawn();
-
-  // Wall jump
-  if((keys['w'] || keys[' '] || keys['arrowup']) && player.wallTouch && !player.onGround){
-    // allow a wall jump impulse if vertical velocity is positive
-    player.vy = -520; player.vx = player.wallTouch==='left'?400:-400; spawnParticle(player.x+player.w/2,player.y+player.h/2,player.vx*0.05, -200,300);
-  }
-
-  // Footstep particles when moving on ground
-  if(player.onGround && Math.abs(player.vx)>120 && Math.random()<dt*10) spawnParticle(player.x + player.w/2, player.y+player.h, -player.vx*0.05, -40,400);
-
-  // Cap velocities
-  player.vy = clamp(player.vy,-1500,2000);
-
-  // Update particles
-  for(let i=particles.length-1;i>=0;i--){ const pa=particles[i]; pa.age += dt*1000; pa.x += pa.dx*dt; pa.y += pa.dy*dt; pa.dy += 600*dt; if(pa.age>pa.life) particles.splice(i,1); }
-}
-
-function dieAndRespawn(){ spawnParticle(player.x+player.w/2, player.y+player.h/2, (Math.random()-0.5)*200, -200,800); player.x = checkpoint.x; player.y = checkpoint.y; player.vx=0; player.vy=0; player.canDash=true; }
-
-function levelComplete(){ gameRunning=false; setTimeout(()=>{ alert('Level complete! Loading next.'); loadLevel((curLevel+1)%levels.length); },200); }
-
-// Rendering
-function draw(){
-  // clear
-  ctx.clearRect(0,0,W,H);
-  // background gradient per realm
-  const r = REALMS[currentRealm];
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, r.bg);
-  g.addColorStop(1, shadeColor(r.bg,-12));
-  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-
-  // parallax clouds / shapes
-  drawParallax();
-
-  // platforms
-  const lvl = levels[curLevel];
-  for(const p of lvl.platforms){
-    if(p.realm !== 'both' && p.realm !== currentRealm) continue;
-    drawRoundedRect(p.x,p.y,p.w,p.h,6, p.realm==='both'? '#274460' : (p.realm==='light'? '#123b5a':'#39293a'));
-    // subtle inner
-    ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(p.x+4,p.y+4,p.w-8,p.h-8);
-  }
-
-  // spikes
-  for(const s of lvl.spikes){ drawSpikes(s.x,s.y,s.w,s.h); }
-
-  // pearls
-  for(const p of lvl.pearls){ if(!p.got) drawPearl(p.x,p.y); }
-
-  // goal
-  ctx.fillStyle = '#ffd166'; ctx.fillRect(lvl.goal.x, lvl.goal.y, lvl.goal.w, lvl.goal.h);
-  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(lvl.goal.x+8,lvl.goal.y+8,lvl.goal.w-16,lvl.goal.h-16);
-
-  // player shadow / trail
-  drawPlayer();
-
-  // particles
-  for(const pa of particles){ drawParticle(pa); }
-
-  // small HUD inside canvas
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(16,16,220,52);
-  ctx.fillStyle = '#cfe9ff'; ctx.font='14px sans-serif'; ctx.fillText(levels[curLevel].name, 28,36);
-  ctx.fillStyle = '#b6c4db'; ctx.font='12px sans-serif'; ctx.fillText('Time: '+(runTime/1000).toFixed(2)+'s', 28,56);
-}
-
-function drawParallax(){
-  // simple drifting shapes that respond to realm
-  ctx.save(); ctx.globalAlpha = currentRealm==='light'?0.7:0.25;
-  for(let i=0;i<8;i++){
-    const px = (i*200 + (performance.now()*0.02*(i%2?1.2:-1.1))) % (W+200) - 100;
-    const py = 60 + (i*40)%220;
-    ctx.beginPath(); ctx.ellipse(px,py,120-(i*6),40,0,0,Math.PI*2);
-    ctx.fillStyle = currentRealm==='light' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.06)'; ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawRoundedRect(x,y,w,h,r,c){ ctx.fillStyle=c; roundRect(ctx,x,y,w,h,r,true,false); }
-function roundRect(ctx,x,y,w,h,r,fill,stroke){ if(typeof r==='undefined') r=5; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke(); }
-
-function drawSpikes(x,y,w,h){ ctx.save(); ctx.translate(x,y); const n = Math.max(3,Math.round(w/12)); for(let i=0;i<n;i++){ const px = i*(w/n); ctx.beginPath(); ctx.moveTo(px, h); ctx.lineTo(px + (w/n)/2, 0); ctx.lineTo(px + (w/n), h); ctx.closePath(); ctx.fillStyle = '#ff6b6b'; ctx.fill(); } ctx.restore(); }
-
-function drawPearl(x,y){ ctx.save(); ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.fillStyle='#7efcff'; ctx.fill(); ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(x-6,y-2,12,4); ctx.restore(); }
-
-function drawPlayer(){ ctx.save(); // body
-  // shadow
-  ctx.beginPath(); ctx.ellipse(player.x+player.w/2, player.y+player.h+8, player.w,8,0,0,Math.PI*2); ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.fill();
-  ctx.fillStyle = currentRealm==='light'? player.color : player.shadow;
-  roundRect(ctx, player.x, player.y, player.w, player.h, 6, true, false);
-  // eye
-  ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(player.x + (player.dir>0? player.w*0.6:player.w*0.15), player.y+player.h*0.25, 6,6);
-  ctx.restore(); }
-
-function drawParticle(pa){ ctx.save(); const a = 1 - (pa.age/pa.life); ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(pa.x, pa.y, 4 + (1-a)*4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.fill(); ctx.restore(); }
-
-// shading helper
-function shadeColor(col, amt){ // amt -100..100
-  const usePound = col[0]==='#'; let c = usePound?col.slice(1):col; const num = parseInt(c,16); let r = (num>>16)+amt; let g=(num>>8 & 0x00FF)+amt; let b=(num & 0x0000FF)+amt; r = clamp(r,0,255); g=clamp(g,0,255); b=clamp(b,0,255); return (usePound?'#':'') + ( (1<<24) + (r<<16) + (g<<8) + b ).toString(16).slice(1);
-}
-
-// Input: realm toggle and jump handling
-let jumpPressedLast=false;
-addEventListener('keydown', e=>{
-  if(e.key.toLowerCase()==='e'){ toggleRealm(); }
-  if(e.key.toLowerCase()==='r'){ loadLevel(curLevel); }
-});
-
-function toggleRealm(){ currentRealm = currentRealm==='light'?'shadow':'light'; spawnParticle(player.x+player.w/2, player.y+player.h/2, (Math.random()-0.5)*400, -200, 500); updateHUD(); }
-
-// Main loop
-let last=performance.now();
-function loop(t){ const dt=(t-last)/1000; last=t; if(gameRunning){ runTime = performance.now()-levelStartTime; }
-  // jump detection (press to jump)
-  const j = keys['w'] || keys[' '] || keys['arrowup'];
-  if(j && !jumpPressedLast){ // on press
-    if(player.onGround){ player.vy = -640; player.onGround=false; player.canDash=true; spawnParticle(player.x+player.w/2, player.y+player.h, (Math.random()-0.5)*200, -200, 400); }
-    else if(player.canDash && !player.onGround){ /* air jump? not enabling extra */ }
-  }
-  jumpPressedLast = j;
-
-  // dash cooldown reset when on ground is handled in physics
-  physics(dt);
-  draw();
-  updateHUD();
-  last=t; requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
-
-// Basic UI hooks
-document.getElementById('btnStart').addEventListener('click', ()=>{ loadLevel(curLevel); });
-document.getElementById('btnNext').addEventListener('click', ()=>{ loadLevel((curLevel+1)%levels.length); });
-document.getElementById('btnEditor').addEventListener('click', ()=>{ openEditor(); });
-
-// Simple level editor (lightweight overlay prompt)
-function openEditor(){ const name = prompt('Create new level name (quick editor will duplicate current level):', levels[curLevel].name + ' - remix'); if(!name) return; const base = JSON.parse(JSON.stringify(levels[curLevel])); base.name = name; base.start.x += 40; base.start.y -= 40; levels.push(base); alert('Level duplicated. Use Next to switch.'); }
-
-// Initialize
-loadLevel(0);
-
-</script>
 </body>
 </html>
